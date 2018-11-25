@@ -15,8 +15,8 @@ using namespace std;
 char **globalmatrix;
 char **mySubMatrix;
 char ****submatrices;
-char *continousSubMatrices;
-char *continousSubMatrix;
+int *continousSubMatrices;
+int *continousSubMatrix;
 
 //Debug Variables
 bool debug = true;
@@ -39,7 +39,7 @@ void declareMySubMatrix(int n, int p1, int p2) {
         mySubMatrix[i] = (char (*))malloc(sizeof(char) * my_n);
     }
     
-    continousSubMatrix = (char *)malloc(sizeof(char *) * my_n);
+    continousSubMatrix = (int *)malloc(sizeof(int *) * my_n);
 }
 
 void declareSubMatrices(int n, int p1, int p2){
@@ -58,7 +58,7 @@ void declareSubMatrices(int n, int p1, int p2){
 		}
 	}
 	
-	continousSubMatrices = (char *)malloc(sizeof(char *) * n);
+	continousSubMatrices = (int *)malloc(sizeof(int *) * n);
 }
 
 void fileToMatrix(string file, int n) {
@@ -132,7 +132,7 @@ void matrixDivider(int p1, int p2, int n){
 		for(int j = 0; j < ((n*n)/(p1*p2))/(n/p2); j++){
 			
 			cout << submatrices[a-1][b-1][i][j];
-			continousSubMatrices[index] = submatrices[a-1][b-1][i][j] ;
+			continousSubMatrices[index] = (int) submatrices[a-1][b-1][i][j] ;
 			index++;
 		}
 		cout << endl;
@@ -204,97 +204,33 @@ int main(int argc, char *argv[])
     
    
    
-   
-	if (MPI_Scatter(continousSubMatrices, (10*10)/(2*2), MPI_CHAR,
-					continousSubMatrix, (10*10)/(2*2), MPI_CHAR,
+	//Step 3: Send out SubMatrices
+	if (MPI_Scatter(continousSubMatrices, (10*10)/(2*2), MPI_INT,
+					continousSubMatrix, (10*10)/(2*2), MPI_INT,
 					ROOT, MPI_COMM_WORLD) != MPI_SUCCESS){
 					cout << "----------SCATTER ERROR UH-OH---------" << endl;
 				}
    
-    
-    if (rank == 3){
-		for(int i = 0; i<25; i++){
-			cout << continousSubMatrix[i];
-			if ((((i+1) % 5) == 0) && (i != 0)){
-				cout << endl;
-			}
-		}
-	}
-	cout << endl;
    
-   
-   
-   
-   
-   
-  
+  //Step 4: Conduct k evoluntionary steps in SYNC
   
   /*
-  //Step 2: Each Processor determines his subrectangle
-  //HARDCODED
-  int startx, endx;
-  int starty, endy;
+   * - prefrom rules on own area
+   * 	- use your data
+   * 	- but also take into factor the border data
+   * - check neighbors borders for changes
+   * - send neightbors your borders
+   * 
+   * 
+   * Proc-1 [____, right wall, bottom wall, _______]
+   * Proc-2 [left wall, _____, _______, bottom wall]
+   * Proc-3 [upper wall, _____, ______, right wall ]
+   * Proc-4 [_______, upperwall, left wall,________]
+   * 
+   */
+   
+	
   
-  
-  if (rank == 0){
-	 buf[0] = N;
-  }
-  MPI_Bcast(&buf, 1, MPI_INT, ROOT, MPI_COMM_WORLD);
- 
-  
-  int nn = buf[0];
-  
-  if (rank==0){
-	  startx = 0;
-	  endx   = N/2;
-	  starty = 0;
-	  endy   = N/2;
-  }
-  else if (rank==1){
-	  startx = nn/2;
-	  endx   = nn;
-	  starty = 0;
-	  endy   = nn/2;
-  }
-  else if (rank==2){
-	  startx = nn/2;
-	  endx   = 0;
-	  starty = 0;
-	  endy   = nn/2;
-  }
-  else if (rank==3){
-	  startx = nn/2;
-	  endx   = 0;
-	  starty = nn/2;
-	  endy   = 0;
-  }
-  
-  //Testing
-  /*
-  char c = 2;
-  if (rank==3){
-	  for(int i=starty; i<endy; i++){
-		  for(int j=startx; i<endx; i++){
-			  
-			  globalmatrix[i][j] = c;
-		  }
-	  }
-	  cout << endl;
-	  printMatrix(nn);
-  }
-  */
-  
-  
-  
-  
-  
-  
-  //Assi-Step 3: ALL procs execute k evolutionary steps of the game in 
-  //             SYNCHRONOUS fashion
-  
-		//Assi-Step 4.1: At each m-th step, Proc-0 collects subrects from other 
-		//               procs and prints whole game board to output.txt WITH
-		//               runntime
 
   
   
@@ -307,4 +243,45 @@ int main(int argc, char *argv[])
   
   return 0;
 }
+
+void gameOfLifeRules(int **arr, int a, int b){
+	
+	for(int i=0; i<a; i++){
+		for(int j=0; j<b; j++){
+			
+			if( arr[i][j] == 1){
+			
+				//Lives
+				if(sumOfNeighboors(arr, i, j) == 2 or sumOfNeighboors(arr, i, j) == 3){
+				
+				}
+				
+				//Dies
+				if(sumOfNeighboors(arr, i, j) < 1 or sumOfNeighboors(arr, i, j) > 4)
+			}
+			else if (arr[i][j] == 0){
+			
+			
+			}
+			
+			
+		}
+	}
+}
+
+int sumOfNeighboors(int **arr, int a, int b){
+	
+	int sum = 0;
+	for(int i= a-1; i<=a+1; a++){
+		for(int j=b-1; j<=b+1; b++){
+			
+			if (!(i=a and j=b)){
+				sum += arr[i][j];
+			}
+		} 
+	}
+	
+	return sum;
+}
+	
 
