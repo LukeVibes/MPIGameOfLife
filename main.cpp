@@ -213,6 +213,10 @@ int main(int argc, char *argv[])
    
    
   //Step 4: Conduct k evoluntionary steps in SYNC
+  for(int i=0; i<k; i++){
+	  gameOfLifeRUles();
+  }
+  
   
   /*
    * - prefrom rules on own area
@@ -253,23 +257,46 @@ void gameOfLifeRules(int **arr, int a, int b){
 			
 				//Lives
 				if(sumOfNeighboors(arr, i, j) == 2 or sumOfNeighboors(arr, i, j) == 3){
-				
+						//update temp array
 				}
 				
 				//Dies
-				if(sumOfNeighboors(arr, i, j) < 1 or sumOfNeighboors(arr, i, j) > 4)
+				if(sumOfNeighboors(arr, i, j) < 1 or sumOfNeighboors(arr, i, j) > 4){
+						//update temp array
+				}
 			}
 			else if (arr[i][j] == 0){
-			
-			
+				if(sumOfNeighboors == 3){
+						//update temp array
+				}
 			}
-			
 			
 		}
 	}
+	
+	//Make actual array temp array.
+	//clear temp array?
 }
 
 int sumOfNeighboors(int **arr, int a, int b){
+	
+	
+	//Ideas for dealing with edges:
+		//- need to include neighboor wall
+			//HOW TO ASSOCIATE NEIGHBOR WALL
+				//1x1 = none
+				//2x1 = two
+				//2x2 = eight
+				//therefore each submatrix has one bound each row/column
+				//2x1 means 2 rows, 1 column, so each sub has 1
+				//2x2 means 2 rows, 2 columns so each sub has 2
+				//we create an array walls[p1xp2][4], 4 is the max...
+				//check wall[submatrix][i] where it has a value
+					//-each index represents different location
+					//-sooo if you are needing to check values from top wall check that index...
+					
+		//- if a hard edge, ignore
+			//hard edge = no neighbor edge
 	
 	int sum = 0;
 	for(int i= a-1; i<=a+1; a++){
