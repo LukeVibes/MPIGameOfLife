@@ -16,8 +16,9 @@ int **globalmatrix;
 int **mySubMatrix;
 int ****submatrices;
 int *continousSubMatrices;
-int *continousSubMatrix;
-
+int *continousSubMatrix;    
+int *neighborWalls;        //    [(n*n)/(p1*p2)]
+//                               [(10*10) / (2*2)]/ p1 or p2
 //Debug Variables
 bool debug = true;
 
@@ -33,10 +34,10 @@ void declareGlobalMatrix(int n) {
 void declareMySubMatrix(int n, int p1, int p2) {
 	int my_n = (n*n)/(p1*p2);
 	
-	mySubMatrix = (int **)malloc(sizeof(int *) * my_n); 
-	for(int i = 0; i < my_n; i++)
+	mySubMatrix = (int **)malloc(sizeof(int *) * my_n/(n/p1)); 
+	for(int i = 0; i < my_n/(n/p1); i++)
     {
-        mySubMatrix[i] = (int (*))malloc(sizeof(int) * my_n);
+        mySubMatrix[i] = (int (*))malloc(sizeof(int) * my_n/(n/p1));
     }
     
     continousSubMatrix = (int *)malloc(sizeof(int *) * my_n);
@@ -58,7 +59,7 @@ void declareSubMatrices(int n, int p1, int p2){
 		}
 	}
 	
-	continousSubMatrices = (int *)malloc(sizeof(int *) * n);
+	continousSubMatrices = (int *)malloc(sizeof(int *) * (n*n));
 }
 
 void fileToMatrix(string file, int n) {
@@ -123,6 +124,7 @@ void matrixDivider(int p1, int p2, int n){
 	}	
 	
 	//Make continous NOT SURE IF THIS WORKS WITH 2*1 :(
+	
 	int index = 0;
 	for(int a = 1; a<= p1; a++){
 	for(int b = 1; b<= p2; b++){
@@ -130,14 +132,16 @@ void matrixDivider(int p1, int p2, int n){
 	for(int i = 0; i < ((n*n)/(p1*p2))/(n/p1); i++){
 		for(int j = 0; j < ((n*n)/(p1*p2))/(n/p2); j++){
 			
-			cout << submatrices[a-1][b-1][i][j];
-			continousSubMatrices[index] = (int) submatrices[a-1][b-1][i][j] ;
+			//cout << submatrices[a-1][b-1][i][j];
+			continousSubMatrices[index] = submatrices[a-1][b-1][i][j];
+			//cout << index << endl;
 			index++;
 		}
-		cout << endl;
+		//cout << endl;
 	}
 
 	}}	
+	
 }
 
 int sumOfNeighboors(int a, int b){
@@ -173,7 +177,7 @@ int sumOfNeighboors(int a, int b){
 	return sum;
 }
 
-void gameOfLifeRules(int a, int b){
+void gameOfLifeRules(int rank, int a, int b){
 	
 	for(int i=0; i<a; i++){
 		for(int j=0; j<b; j++){
@@ -214,6 +218,47 @@ int twoDSubMatrix(int n, int p1, int p2){
 	}
 }
 
+void freeAll(int rank, int n, int p1, int p2){
+	
+	if(rank == 0){
+		//globalmatrix
+		for(int i = 0; i<n; i++){
+			free(globalmatrix[i]);
+		}
+		free(globalmatrix);
+		
+		for(int i = 0; i < p1; i++){
+			for(int j = 0; j < p2; j++){
+				for(int k = 0; k < n; k++){
+					free(submatrices[i][j][k]);
+				}
+				free(submatrices[i][j]);
+			}
+			free(submatrices[i]);
+		}
+		free(submatrices);
+	
+		//continous submatrices
+		free(continousSubMatrices);
+		
+		
+	}
+	
+	
+	//mysubmatrix
+	for(int i = 0; i < ((n*n)/(p1*p2))/(n/p1); i++){
+		free(mySubMatrix[i]);
+	}
+	free(mySubMatrix);
+
+	
+	//continoussubmatrix
+	free(continousSubMatrix);
+	
+	
+	//neighboorsWalls
+	free(neighborWalls);
+}
 
 
 int main(int argc, char *argv[])
@@ -227,6 +272,7 @@ int main(int argc, char *argv[])
   p = MPI::COMM_WORLD.Get_size(); 
   rank = MPI::COMM_WORLD.Get_rank(); 
   int const ROOT = 0;
+  
   
   //Assignment Variables
   int p1, p2; // p1, p2: boardgame partitioned into p1 x p2 subrects
@@ -252,8 +298,10 @@ int main(int argc, char *argv[])
 		declareSubMatrices(N, p1, p2);
 	}
 	
+	
 	//NEED TO BROADCAST N AND P1, P2
 	declareMySubMatrix(10, 2, 2);
+  
   
   //Step 1: Processor-0 reads in NxN binary matrix from input.txt
 	if (rank == 0) {
@@ -261,11 +309,12 @@ int main(int argc, char *argv[])
 		fileToMatrix(file, N);
 	}
    
+   
    //Step 2: Subdivide Matrix
 	if (rank == 0){
 		matrixDivider(p1, p2, N);
 		
-		for(int i=0; i<=5; i++){
+		for(int i=0; i<5; i++){
 			for(int j=0; j<5; j++){
 				cout << submatrices[0][0][i][j];
 			}
@@ -274,7 +323,7 @@ int main(int argc, char *argv[])
 	}
     
    
-   
+  
 	//Step 3: Send out SubMatrices
 	if (MPI_Scatter(continousSubMatrices, (10*10)/(2*2), MPI_INT,
 					continousSubMatrix, (10*10)/(2*2), MPI_INT,
@@ -282,12 +331,12 @@ int main(int argc, char *argv[])
 					cout << "----------SCATTER ERROR UH-OH---------" << endl;
 				}
    
-   
+    
   //Step 4: Conduct k evoluntionary steps in SYNC
   twoDSubMatrix(10, 2, 2);
   
   for(int i=0; i<k; i++){
-	//  gameOfLifeRules();
+	  //gameOfLifeRules((10*10)/(2*2), (10*10)/(2*2));
   }
   
   
@@ -308,13 +357,9 @@ int main(int argc, char *argv[])
    
 	
   
-
-  
-  
-  
   //Wrap-UP
   MPI::Finalize();
-  free(globalmatrix);
+  freeAll(rank, 10, 2, 2);
   
   
   
