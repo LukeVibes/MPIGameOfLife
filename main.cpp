@@ -12,9 +12,9 @@
 using namespace std;
 
 //Matrix Array
-char **globalmatrix;
-char **mySubMatrix;
-char ****submatrices;
+int **globalmatrix;
+int **mySubMatrix;
+int ****submatrices;
 int *continousSubMatrices;
 int *continousSubMatrix;
 
@@ -23,20 +23,20 @@ bool debug = true;
 
 void declareGlobalMatrix(int n) {
 	
-	globalmatrix = (char **)malloc(sizeof(char *) * n); 
+	globalmatrix = (int **)malloc(sizeof(int *) * n); 
 	for(int i = 0; i < n; i++)
     {
-        globalmatrix[i] = (char (*))malloc(sizeof(char) * n);
+        globalmatrix[i] = (int (*))malloc(sizeof(int) * n);
     }
 }
 
 void declareMySubMatrix(int n, int p1, int p2) {
 	int my_n = (n*n)/(p1*p2);
 	
-	mySubMatrix = (char **)malloc(sizeof(char *) * my_n); 
+	mySubMatrix = (int **)malloc(sizeof(int *) * my_n); 
 	for(int i = 0; i < my_n; i++)
     {
-        mySubMatrix[i] = (char (*))malloc(sizeof(char) * my_n);
+        mySubMatrix[i] = (int (*))malloc(sizeof(int) * my_n);
     }
     
     continousSubMatrix = (int *)malloc(sizeof(int *) * my_n);
@@ -44,16 +44,16 @@ void declareMySubMatrix(int n, int p1, int p2) {
 
 void declareSubMatrices(int n, int p1, int p2){
 	
-	submatrices = (char ****)malloc(sizeof(char ***) * p1);
+	submatrices = (int ****)malloc(sizeof(int ***) * p1);
 	for(int i = 0; i < p1; i++)
 	{
-		submatrices[i] = (char ***)malloc(sizeof(char **) * p2);
+		submatrices[i] = (int ***)malloc(sizeof(int **) * p2);
 		for(int j = 0; j < p2; j++)
 		{
-			submatrices[i][j] = (char **)malloc(sizeof(char *) * n);
+			submatrices[i][j] = (int **)malloc(sizeof(int *) * n);
 			for(int k = 0; k < n; k++)
 			{
-				submatrices[i][j][k] = (char (*))malloc(sizeof(char) * n);
+				submatrices[i][j][k] = (int (*))malloc(sizeof(int) * n);
 			}
 		}
 	}
@@ -71,11 +71,13 @@ void fileToMatrix(string file, int n) {
 		return;
 		}
 		
-		
+		char c;
 		for (int i = 0; i < n; i++) {
 			for (int j = 0; j < n; j++) {
-				inputFile >> globalmatrix[i][j];
-				if(debug==true){cout << globalmatrix[i][j];}
+				inputFile >> c;
+				globalmatrix[i][j] = (int) c - '0';
+			
+				if(debug==true){cout << globalmatrix[i][j] << " ";}
 			}
 			if(debug==true){cout << endl;}
 		}
@@ -94,9 +96,6 @@ void printGMatrix(int n){
 		}
 
 }
-
-
-
 
 void matrixDivider(int p1, int p2, int n){
 	int subi = 0;
@@ -141,6 +140,80 @@ void matrixDivider(int p1, int p2, int n){
 	}}	
 }
 
+int sumOfNeighboors(int a, int b){
+	
+	
+	//Ideas for dealing with edges:
+		//- need to include neighboor wall
+			//HOW TO ASSOCIATE NEIGHBOR WALL
+				//1x1 = none
+				//2x1 = two
+				//2x2 = eight
+				//therefore each submatrix has one bound each row/column
+				//2x1 means 2 rows, 1 column, so each sub has 1
+				//2x2 means 2 rows, 2 columns so each sub has 2
+				//we create an array walls[p1xp2][4], 4 is the max...
+				//check wall[submatrix][i] where it has a value
+					//-each index represents different location
+					//-sooo if you are needing to check values from top wall check that index...
+					
+		//- if a hard edge, ignore
+			//hard edge = no neighbor edge
+	
+	int sum = 0;
+	for(int i= a-1; i<=a+1; a++){
+		for(int j=b-1; j<=b+1; b++){
+			
+			if (!(i==a and j==b)){
+				sum += mySubMatrix[i][j];
+			}
+		} 
+	}
+	
+	return sum;
+}
+
+void gameOfLifeRules(int a, int b){
+	
+	for(int i=0; i<a; i++){
+		for(int j=0; j<b; j++){
+			
+			if( mySubMatrix[i][j] == 1){
+			
+				//Lives
+				if(sumOfNeighboors(i, j) == 2 or sumOfNeighboors(i, j) == 3){
+						//update temp array
+				}
+				
+				//Dies
+				if(sumOfNeighboors(i, j) < 1 or sumOfNeighboors(i, j) > 4){
+						//update temp array
+				}
+			}
+			else if (mySubMatrix[i][j] == 0){
+				if(sumOfNeighboors(i, j) == 3){
+						//update temp array
+				}
+			}
+			
+		}
+	}
+	
+	//Make actual array temp array.
+	//clear temp array?
+}
+
+int twoDSubMatrix(int n, int p1, int p2){
+	int count = 0;
+	
+	for(int i=0; i<((n*n)/(p1*p2))/(n/p1); i++){
+		for(int j=0; j<((n*n)/(p1*p2))/(n/p2); j++){
+			mySubMatrix[i][j] = continousSubMatrix[count];
+			count++;
+		}
+	}
+}
+
 
 
 int main(int argc, char *argv[])
@@ -153,8 +226,6 @@ int main(int argc, char *argv[])
   MPI::Init(argc, argv);
   p = MPI::COMM_WORLD.Get_size(); 
   rank = MPI::COMM_WORLD.Get_rank(); 
-  int *buf;
-  buf = (int *) malloc(p*sizeof(int));
   int const ROOT = 0;
   
   //Assignment Variables
@@ -213,8 +284,10 @@ int main(int argc, char *argv[])
    
    
   //Step 4: Conduct k evoluntionary steps in SYNC
+  twoDSubMatrix(10, 2, 2);
+  
   for(int i=0; i<k; i++){
-	  gameOfLifeRUles();
+	//  gameOfLifeRules();
   }
   
   
@@ -247,68 +320,4 @@ int main(int argc, char *argv[])
   
   return 0;
 }
-
-void gameOfLifeRules(int **arr, int a, int b){
-	
-	for(int i=0; i<a; i++){
-		for(int j=0; j<b; j++){
-			
-			if( arr[i][j] == 1){
-			
-				//Lives
-				if(sumOfNeighboors(arr, i, j) == 2 or sumOfNeighboors(arr, i, j) == 3){
-						//update temp array
-				}
-				
-				//Dies
-				if(sumOfNeighboors(arr, i, j) < 1 or sumOfNeighboors(arr, i, j) > 4){
-						//update temp array
-				}
-			}
-			else if (arr[i][j] == 0){
-				if(sumOfNeighboors == 3){
-						//update temp array
-				}
-			}
-			
-		}
-	}
-	
-	//Make actual array temp array.
-	//clear temp array?
-}
-
-int sumOfNeighboors(int **arr, int a, int b){
-	
-	
-	//Ideas for dealing with edges:
-		//- need to include neighboor wall
-			//HOW TO ASSOCIATE NEIGHBOR WALL
-				//1x1 = none
-				//2x1 = two
-				//2x2 = eight
-				//therefore each submatrix has one bound each row/column
-				//2x1 means 2 rows, 1 column, so each sub has 1
-				//2x2 means 2 rows, 2 columns so each sub has 2
-				//we create an array walls[p1xp2][4], 4 is the max...
-				//check wall[submatrix][i] where it has a value
-					//-each index represents different location
-					//-sooo if you are needing to check values from top wall check that index...
-					
-		//- if a hard edge, ignore
-			//hard edge = no neighbor edge
-	
-	int sum = 0;
-	for(int i= a-1; i<=a+1; a++){
-		for(int j=b-1; j<=b+1; b++){
-			
-			if (!(i=a and j=b)){
-				sum += arr[i][j];
-			}
-		} 
-	}
-	
-	return sum;
-}
-	
 
