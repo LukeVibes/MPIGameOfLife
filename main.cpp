@@ -17,7 +17,7 @@ int **mySubMatrix;
 int ****submatrices;
 int *continousSubMatrices;
 int *continousSubMatrix;    
-int *neighborWalls;       
+int *neighborEdges;       
 
 ///Debug Variables
 bool debug = true;
@@ -225,8 +225,8 @@ int sumOfNghbrs(int rank, int p, int q, int n1, int n2){
 			
 			///Left Edge
 			if(j < 0){
-				if(neighborWalls[i] != -1){  ///does this processor have a nighbr at this out of bound (ie has it been sent wall data?)
-					sum += neighborWalls[i];
+				if(neighborEdges[rankdplc+i] != -1){  ///does this processor have a nighbr at this out of bound (ie has it been sent wall data?)
+					sum += neighborEdges[rankdplc+i];
 				}
 				else{
 					sum += OUTOFBOUNDSVALUE; ///if not, it must be at the edge of the actual global graph
@@ -235,8 +235,8 @@ int sumOfNghbrs(int rank, int p, int q, int n1, int n2){
 			
 			///Right Edge
 			else if(j > n2){
-				if(neighborWalls[n1+i] != -1){ 
-					sum += neighborWalls[n1+i];
+				if(neighborEdges[nrankdplc+2+i] != -1){ 
+					sum += neighborEdges[rankdplc+n2+i];
 				}
 				else{
 					sum += OUTOFBOUNDSVALUE; 
@@ -245,8 +245,8 @@ int sumOfNghbrs(int rank, int p, int q, int n1, int n2){
 			
 			///Top Edge
 			else if(i < 0){
-				if(neighborWalls[n1+n1+j] != -1){ 
-					sum += neighborWalls[n1+n1+j];
+				if(neighborEdges[rankdplc+n2+n2+j] != -1){ 
+					sum += neighborEdges[rankdplc+n2+n2+j];
 				}
 				else{
 					sum += OUTOFBOUNDSVALUE; 
@@ -255,8 +255,8 @@ int sumOfNghbrs(int rank, int p, int q, int n1, int n2){
 			
 			///Bottom Edge
 			else if(i > n1){
-				if(neighborWalls[n1+n1+n2+j] != -1){ 
-					sum += neighborWalls[n1+n1+n2+j];
+				if(neighborEdges[rankdplc+n2+n2+n1+j] != -1){ 
+					sum += neighborEdges[rankdplc+n2+n2+n1+j];
 				}
 				else{
 					sum += OUTOFBOUNDSVALUE; 
@@ -264,10 +264,9 @@ int sumOfNghbrs(int rank, int p, int q, int n1, int n2){
 			}
 			
 			///Normal location
-			else if( !(i==p and j==p)){
-				if ((rank % 2) == 0){
-				}
-				else{
+			else {
+				if( !(i==p and j==p)){
+					sum += mySubMatrix[i][j];
 				}
 				
 			}
@@ -364,9 +363,44 @@ void freeAll(int rank, int n, int p1, int p2){
 	
 	
 	///neighboorsWalls
-	free(neighborWalls);
+	free(neighborEdges);
 }
 
+void fill_neighborEdges(int rank, int p, int n1, int n2){
+	int rankdplce = rank * (n1 + n2);
+	
+	///Set blanc values
+	for(int i=0; i<(p*(n1 + n2)); i++){
+		neighborEdges[i]= -1;
+	}
+
+	///Set actual values
+	/// Thanks to the forloops ordering all values will automatically
+	/// be added in the correct order!
+	for(int i = 0; i< n1; i++){
+		for(int j = 0; j< n2; j++){
+			///Left Edge
+			if(j==0){
+				neighborEdges[rankdplc+j] = mySubMatrix[i][j];
+			}
+			
+			///Right Edge
+			if(j==(n2-1)){
+				neighborEdges[rankdplc+n2+j] = mySubMatrix[i][j];
+			}
+			
+			///Top Edge
+			if(i==0){
+				neighborEdges[rankdplc+n2+n2+j] = mySubMatrix[i][j];
+			}
+			
+			///Bottom Edge
+			if(i==(n1-1)){
+				neighborEdges[rankdplc+n2+n2+n1+j] = mySubMatrix[i][j];
+			}		
+		}
+	}
+}
 
 int main(int argc, char *argv[])
 {
@@ -461,8 +495,13 @@ int main(int argc, char *argv[])
  //Step 4: Conduct k evoluntionary steps in SYNC
 	twoDSubMatrix(N, p1, p2);
   
+	neighborEdges = (int *)malloc(sizeof(int *) * p*((2*(N/p1)) + (2*(N/p2))));
+  
 	for(int i=0; i<k; i++){
-	  ///gameOfLifeRules(rank, ((N*N)/(p1*p2))/(N/p1), ((N*N)/(p1*p2))/(N/p2);
+		fill_neighborEdges(rank, p, (((N*N)/(p1*p2))/(N/p1)), (((N*N)/(p1*p2))/(N/p2)));
+		MPI_Alltoall();
+		
+	  ///gameOfLifeRules(rank, ((N*N)/(p1*p2))/(N/p1), ((N*N)/(p1*p2))/(N/p2));
 	}
 	
 	/// Proc-1 [____, right wall, bottom wall, _______]
