@@ -23,7 +23,7 @@ int *neighborWalls;
 bool debug = true;
 
 ///Global Consts
-int OUTOFBOUNDSVALUE 0;
+int OUTOFBOUNDSVALUE = 0;
 
 void declareGlobalMatrix(int n) {
 	
@@ -213,7 +213,7 @@ int sumOfNghbrs(int rank, int p, int q, int n1, int n2){
 	int i = p-1;
 	int j = q-1;
 	
-	
+	int sum = 0;
 	//WHEN YOU COME BACK CHECK WHAT N1 AND N2 ARE, AND UNDERSTAND HOW P1, P2 MAP TO i, j
 	
 	
