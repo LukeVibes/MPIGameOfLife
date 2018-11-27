@@ -144,31 +144,56 @@ void matrixDivider(int p1, int p2, int n){
 	
 }
 
-int sumOfNeighboors(int a, int b){
+int sumOfNeighboors(int rank, int q, int p, int n1, int n2){		
+			
+	//Left Edge
+	if((p-1) < 0){
+		if ((rank % 2)==0){
+			//use static values
+		}
+		else{
+			//get nghbr values
+		}
+	}
+	
+	//Right Edge
+	else if((p+1) > n2){
+		if ((rank % 2)==0){
+			//use static values
+		}
+		else{
+			//get nghbr values
+		}
+	}
+	
+	//Top Edge
+	if((q-1) < 0){
+		if ((rank % 2)==0){
+			//use static values
+		}
+		else{
+			//get nghbr values
+		}
+	}
+	
+	//Bottom Edge
+	else if((q+1) > n1){
+		if ((rank % 2)==0){
+			//use static values
+		}
+		else{
+			//get nghbr values
+		}
+	}
 	
 	
-	//Ideas for dealing with edges:
-		//- need to include neighboor wall
-			//HOW TO ASSOCIATE NEIGHBOR WALL
-				//1x1 = none
-				//2x1 = two
-				//2x2 = eight
-				//therefore each submatrix has one bound each row/column
-				//2x1 means 2 rows, 1 column, so each sub has 1
-				//2x2 means 2 rows, 2 columns so each sub has 2
-				//we create an array walls[p1xp2][4], 4 is the max...
-				//check wall[submatrix][i] where it has a value
-					//-each index represents different location
-					//-sooo if you are needing to check values from top wall check that index...
-					
-		//- if a hard edge, ignore
-			//hard edge = no neighbor edge
+	
 	
 	int sum = 0;
-	for(int i= a-1; i<=a+1; a++){
-		for(int j=b-1; j<=b+1; b++){
+	for(int i= q-1; i<=q+1; i++){
+		for(int j=p-1; j<=p+1; j++){
 			
-			if (!(i==a and j==b)){
+			if (!(i==q and j==p)){
 				sum += mySubMatrix[i][j];
 			}
 		} 
@@ -179,23 +204,27 @@ int sumOfNeighboors(int a, int b){
 
 void gameOfLifeRules(int rank, int a, int b){
 	
+	int sum;
 	for(int i=0; i<a; i++){
 		for(int j=0; j<b; j++){
 			
+			
+			sum = sumOfNeighboors(rank, i, j, a, b);
 			if( mySubMatrix[i][j] == 1){
 			
+				
 				//Lives
-				if(sumOfNeighboors(i, j) == 2 or sumOfNeighboors(i, j) == 3){
+				if(sum == 2 or sum == 3){
 						//update temp array
 				}
 				
 				//Dies
-				if(sumOfNeighboors(i, j) < 1 or sumOfNeighboors(i, j) > 4){
+				if(sum < 1 or sum > 4){
 						//update temp array
 				}
 			}
 			else if (mySubMatrix[i][j] == 0){
-				if(sumOfNeighboors(i, j) == 3){
+				if(sum == 3){
 						//update temp array
 				}
 			}
@@ -281,26 +310,44 @@ int main(int argc, char *argv[])
   int m;      // m: at each m-th step proc-0 collects subrects from 
               //    other procs and prints the current configuration
               //    into the output file.
-  
-  
-  char rbuf[10][10];
+ 
+ 
+  //Inital Bcast Variables
+  int *sendbuf;
+  sendbuf = (int (*))malloc(sizeof(int) * 5);
   
   //Step 0: Processor-0 reads in Assigment Variables
 	if (rank == 0){
-		//HARDCODED
 		N = 10;
 		p1 = 2;
 		p2 = 2;
 		k  = 100;
 		m  = 25;
 		
+		sendbuf[0] = N;
+		sendbuf[1] = p1;
+		sendbuf[2] = p2;
+		sendbuf[3] = k;
+		sendbuf[4] = m;
+		
 		declareGlobalMatrix(N);
 		declareSubMatrices(N, p1, p2);
 	}
 	
+	//---Step 0.1: send Assignment Variables to all processors
+	MPI_Bcast(sendbuf, 5, MPI_INT, 0, MPI_COMM_WORLD);
 	
-	//NEED TO BROADCAST N AND P1, P2
-	declareMySubMatrix(10, 2, 2);
+	//---Step 0.2: have all processors locally store Assigment Variables (and use them)
+	if(rank != 0){
+		N  = sendbuf[0];
+		p1 = sendbuf[1];
+		p2 = sendbuf[2];
+		k  = sendbuf[3];
+		m  = sendbuf[4];
+	}
+	free(sendbuf);
+
+	declareMySubMatrix(N, p1, p2);
   
   
   //Step 1: Processor-0 reads in NxN binary matrix from input.txt
@@ -314,29 +361,44 @@ int main(int argc, char *argv[])
 	if (rank == 0){
 		matrixDivider(p1, p2, N);
 		
-		for(int i=0; i<5; i++){
-			for(int j=0; j<5; j++){
-				cout << submatrices[0][0][i][j];
+		if(debug==true){
+			for(int i=0; i<5; i++){
+				for(int j=0; j<5; j++){
+					cout << submatrices[0][0][i][j];
+				}
+				cout << endl;
 			}
-			cout << endl;
 		}
 	}
     
    
   
 	//Step 3: Send out SubMatrices
-	if (MPI_Scatter(continousSubMatrices, (10*10)/(2*2), MPI_INT,
-					continousSubMatrix, (10*10)/(2*2), MPI_INT,
+	if (MPI_Scatter(continousSubMatrices, ((N*N)/(p1*p2)), MPI_INT,
+					continousSubMatrix, ((N*N)/(p1*p2)), MPI_INT,
 					ROOT, MPI_COMM_WORLD) != MPI_SUCCESS){
 					cout << "----------SCATTER ERROR UH-OH---------" << endl;
 				}
    
     
   //Step 4: Conduct k evoluntionary steps in SYNC
-  twoDSubMatrix(10, 2, 2);
+  twoDSubMatrix(N, p1, p2);
+  
+  //questions for prof
+  /*
+   * how does it work with open stack
+   * 	-launch instance?
+   * 	-so far i have been testing without it, how will it change, how will i know it works
+   * 
+   * any tips for sending 2d arrays over MPI
+   * 
+   * should i be sending copies of the global array to the subprocessors, or should i be creating new arrays for each processor?
+   * /
+   */
+   
   
   for(int i=0; i<k; i++){
-	  //gameOfLifeRules((10*10)/(2*2), (10*10)/(2*2));
+	  //gameOfLifeRules( rank, ((10*10)/(2*2))/(n/p1), ((10*10)/(2*2))/(n/p2);
   }
   
   
@@ -359,7 +421,7 @@ int main(int argc, char *argv[])
   
   //Wrap-UP
   MPI::Finalize();
-  freeAll(rank, 10, 2, 2);
+  freeAll(rank, N, p1, p2);
   
   
   
