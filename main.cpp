@@ -11,16 +11,19 @@
 
 using namespace std;
 
-//Matrix Array
+///Matrix Array
 int **globalmatrix;
 int **mySubMatrix;
 int ****submatrices;
 int *continousSubMatrices;
 int *continousSubMatrix;    
-int *neighborWalls;        //    [(n*n)/(p1*p2)]
-//                               [(10*10) / (2*2)]/ p1 or p2
-//Debug Variables
+int *neighborWalls;       
+
+///Debug Variables
 bool debug = true;
+
+///Global Consts
+int OUTOFBOUNDSVALUE 0;
 
 void declareGlobalMatrix(int n) {
 	
@@ -104,14 +107,19 @@ void matrixDivider(int p1, int p2, int n){
 	
 	cout << p1 << endl;
 	
+	/// This For Loop loops poplates eacgh submatrix, using the "submatrices"
+	/// 4D array we creates where: 
+	///      p1- being the row and 
+	///      p2- being the colm
+	/// of the grid, of the divided global matrix.
 	for(int a = 1; a<= p1; a++){
 	for(int i = (((a-1)*n)/a); i < n/(p1 - (a-1)); i++){
 		
 		for(int b = 1; b<= p2; b++){
-		cout << a << "|" << b << "  :";
+		if (debug ==true) {cout << a << "|" << b << "  :";}
 		for(int j = (((b-1)*n)/b); j < n/(p2 -(b-1)); j++){
 			
-			cout << "[" << i << "," << j << "]=[" << subi << "," << subj << "]  ";
+			if (debug ==true) {cout << "[" << i << "," << j << "]=[" << subi << "," << subj << "]  ";}
 			submatrices[a-1][b-1][subi][subj] = globalmatrix[i][j];
 			subj++;
 		}
@@ -123,21 +131,19 @@ void matrixDivider(int p1, int p2, int n){
 	subi=0;
 	}	
 	
-	//Make continous NOT SURE IF THIS WORKS WITH 2*1 :(
 	
+	/// Now we turn this 4D array into a continous 1D array as MPI does 
+	/// not like mulit-dimensional arrays. 
 	int index = 0;
 	for(int a = 1; a<= p1; a++){
 	for(int b = 1; b<= p2; b++){
 		
 	for(int i = 0; i < ((n*n)/(p1*p2))/(n/p1); i++){
 		for(int j = 0; j < ((n*n)/(p1*p2))/(n/p2); j++){
-			
-			//cout << submatrices[a-1][b-1][i][j];
+
 			continousSubMatrices[index] = submatrices[a-1][b-1][i][j];
-			//cout << index << endl;
 			index++;
 		}
-		//cout << endl;
 	}
 
 	}}	
@@ -146,7 +152,7 @@ void matrixDivider(int p1, int p2, int n){
 
 int sumOfNeighboors(int rank, int q, int p, int n1, int n2){		
 			
-	//Left Edge
+	///Left Edge
 	if((p-1) < 0){
 		if ((rank % 2)==0){
 			//use static values
@@ -156,7 +162,7 @@ int sumOfNeighboors(int rank, int q, int p, int n1, int n2){
 		}
 	}
 	
-	//Right Edge
+	///Right Edge
 	else if((p+1) > n2){
 		if ((rank % 2)==0){
 			//use static values
@@ -166,7 +172,7 @@ int sumOfNeighboors(int rank, int q, int p, int n1, int n2){
 		}
 	}
 	
-	//Top Edge
+	///Top Edge
 	if((q-1) < 0){
 		if ((rank % 2)==0){
 			//use static values
@@ -176,7 +182,7 @@ int sumOfNeighboors(int rank, int q, int p, int n1, int n2){
 		}
 	}
 	
-	//Bottom Edge
+	///Bottom Edge
 	else if((q+1) > n1){
 		if ((rank % 2)==0){
 			//use static values
@@ -202,6 +208,78 @@ int sumOfNeighboors(int rank, int q, int p, int n1, int n2){
 	return sum;
 }
 
+int sumOfNghbrs(int rank, int p, int q, int n1, int n2){
+
+	int i = p-1;
+	int j = q-1;
+	
+	
+	//WHEN YOU COME BACK CHECK WHAT N1 AND N2 ARE, AND UNDERSTAND HOW P1, P2 MAP TO i, j
+	
+	
+	int index;
+	int jndex;
+	while(i <= p+1){
+		while(j <= q+1){
+			///(see Left Edge for comments that apply to all Edges)
+			
+			///Left Edge
+			if(j < 0){
+				if(neighborWalls[i] != -1){  ///does this processor have a nighbr at this out of bound (ie has it been sent wall data?)
+					sum += neighborWalls[i];
+				}
+				else{
+					sum += OUTOFBOUNDSVALUE; ///if not, it must be at the edge of the actual global graph
+				}
+			}
+			
+			///Right Edge
+			else if(j > n2){
+				if(neighborWalls[n1+i] != -1){ 
+					sum += neighborWalls[n1+i];
+				}
+				else{
+					sum += OUTOFBOUNDSVALUE; 
+				}
+			}
+			
+			///Top Edge
+			else if(i < 0){
+				if(neighborWalls[n1+n1+j] != -1){ 
+					sum += neighborWalls[n1+n1+j];
+				}
+				else{
+					sum += OUTOFBOUNDSVALUE; 
+				}
+			}
+			
+			///Bottom Edge
+			else if(i > n1){
+				if(neighborWalls[n1+n1+n2+j] != -1){ 
+					sum += neighborWalls[n1+n1+n2+j];
+				}
+				else{
+					sum += OUTOFBOUNDSVALUE; 
+				}
+			}
+			
+			///Normal location
+			else if( !(i==p and j==p)){
+				if ((rank % 2) == 0){
+				}
+				else{
+				}
+				
+			}
+			j++;
+		}
+		i++;
+		j = q-1;
+	}
+
+
+}
+
 void gameOfLifeRules(int rank, int a, int b){
 	
 	int sum;
@@ -213,12 +291,12 @@ void gameOfLifeRules(int rank, int a, int b){
 			if( mySubMatrix[i][j] == 1){
 			
 				
-				//Lives
+				///Lives
 				if(sum == 2 or sum == 3){
 						//update temp array
 				}
 				
-				//Dies
+				///Dies
 				if(sum < 1 or sum > 4){
 						//update temp array
 				}
@@ -250,7 +328,7 @@ int twoDSubMatrix(int n, int p1, int p2){
 void freeAll(int rank, int n, int p1, int p2){
 	
 	if(rank == 0){
-		//globalmatrix
+		///globalmatrix
 		for(int i = 0; i<n; i++){
 			free(globalmatrix[i]);
 		}
@@ -267,56 +345,56 @@ void freeAll(int rank, int n, int p1, int p2){
 		}
 		free(submatrices);
 	
-		//continous submatrices
+		///continous submatrices
 		free(continousSubMatrices);
 		
 		
 	}
 	
 	
-	//mysubmatrix
+	///mysubmatrix
 	for(int i = 0; i < ((n*n)/(p1*p2))/(n/p1); i++){
 		free(mySubMatrix[i]);
 	}
 	free(mySubMatrix);
 
 	
-	//continoussubmatrix
+	///continoussubmatrix
 	free(continousSubMatrix);
 	
 	
-	//neighboorsWalls
+	///neighboorsWalls
 	free(neighborWalls);
 }
 
 
 int main(int argc, char *argv[])
 {
-  int rank;
-  int p;
-  double wtime;
-  
-  //MPI set-up
-  MPI::Init(argc, argv);
-  p = MPI::COMM_WORLD.Get_size(); 
-  rank = MPI::COMM_WORLD.Get_rank(); 
-  int const ROOT = 0;
-  
-  
-  //Assignment Variables
-  int p1, p2; // p1, p2: boardgame partitioned into p1 x p2 subrects
-  int k;      // k: number of evolutoins
-  int N;      // N: boardgame is size NxN
-  int m;      // m: at each m-th step proc-0 collects subrects from 
-              //    other procs and prints the current configuration
-              //    into the output file.
+	int rank;
+	int p;
+	double wtime;
+
+	///MPI set-up
+	MPI::Init(argc, argv);
+	p = MPI::COMM_WORLD.Get_size(); 
+	rank = MPI::COMM_WORLD.Get_rank(); 
+	int const ROOT = 0;
+
+
+	///Assignment Variables
+	int p1, p2; /// p1, p2: boardgame partitioned into p1 x p2 subrects
+	int k;      /// k: number of evolutoins
+	int N;      /// N: boardgame is size NxN
+	int m;      /// m: at each m-th step proc-0 collects subrects from 
+			  ///    other procs and prints the current configuration
+			  ///    into the output file.
  
  
-  //Inital Bcast Variables
-  int *sendbuf;
-  sendbuf = (int (*))malloc(sizeof(int) * 5);
+	///Inital Bcast Variables
+	int *sendbuf;
+	sendbuf = (int (*))malloc(sizeof(int) * 5);
   
-  //Step 0: Processor-0 reads in Assigment Variables
+//Step 0: Processor-0 reads in Assigment Variables
 	if (rank == 0){
 		N = 10;
 		p1 = 2;
@@ -348,16 +426,16 @@ int main(int argc, char *argv[])
 	free(sendbuf);
 
 	declareMySubMatrix(N, p1, p2);
+ 
   
-  
-  //Step 1: Processor-0 reads in NxN binary matrix from input.txt
+//Step 1: Processor-0 reads in NxN binary matrix from input.txt
 	if (rank == 0) {
 		string file = "input1.txt";
 		fileToMatrix(file, N);
 	}
    
    
-   //Step 2: Subdivide Matrix
+//Step 2: Subdivide Matrix
 	if (rank == 0){
 		matrixDivider(p1, p2, N);
 		
@@ -372,8 +450,7 @@ int main(int argc, char *argv[])
 	}
     
    
-  
-	//Step 3: Send out SubMatrices
+ //Step 3: Send out SubMatrices
 	if (MPI_Scatter(continousSubMatrices, ((N*N)/(p1*p2)), MPI_INT,
 					continousSubMatrix, ((N*N)/(p1*p2)), MPI_INT,
 					ROOT, MPI_COMM_WORLD) != MPI_SUCCESS){
@@ -381,50 +458,28 @@ int main(int argc, char *argv[])
 				}
    
     
-  //Step 4: Conduct k evoluntionary steps in SYNC
-  twoDSubMatrix(N, p1, p2);
+ //Step 4: Conduct k evoluntionary steps in SYNC
+	twoDSubMatrix(N, p1, p2);
   
-  //questions for prof
-  /*
-   * how does it work with open stack
-   * 	-launch instance?
-   * 	-so far i have been testing without it, how will it change, how will i know it works
-   * 
-   * any tips for sending 2d arrays over MPI
-   * 
-   * should i be sending copies of the global array to the subprocessors, or should i be creating new arrays for each processor?
-   * /
-   */
-   
-  
-  for(int i=0; i<k; i++){
-	  //gameOfLifeRules( rank, ((10*10)/(2*2))/(n/p1), ((10*10)/(2*2))/(n/p2);
-  }
-  
-  
-  /*
-   * - prefrom rules on own area
-   * 	- use your data
-   * 	- but also take into factor the border data
-   * - check neighbors borders for changes
-   * - send neightbors your borders
-   * 
-   * 
-   * Proc-1 [____, right wall, bottom wall, _______]
-   * Proc-2 [left wall, _____, _______, bottom wall]
-   * Proc-3 [upper wall, _____, ______, right wall ]
-   * Proc-4 [_______, upperwall, left wall,________]
-   * 
-   */
-   
+	for(int i=0; i<k; i++){
+	  ///gameOfLifeRules(rank, ((N*N)/(p1*p2))/(N/p1), ((N*N)/(p1*p2))/(N/p2);
+	}
 	
-  
-  //Wrap-UP
-  MPI::Finalize();
-  freeAll(rank, N, p1, p2);
-  
-  
-  
-  return 0;
+	/// Proc-1 [____, right wall, bottom wall, _______]
+	/// Proc-2 [left wall, _____, _______, bottom wall]
+	/// Proc-3 [upper wall, _____, ______, right wall ]
+	/// Proc-4 [_______, upperwall, left wall,________]
+	
+
+
+
+
+	///Wrap-UP
+	MPI::Finalize();
+	freeAll(rank, N, p1, p2);
+
+
+
+	return 0;
 }
 
