@@ -11,13 +11,21 @@
 
 using namespace std;
 
+//1. REMEBER TO TAKE A LOOK AT MYSUBMATRIX--> N/P1  N/P2 RAHTHER THAN MY_N
+//2. make 2d arrays int 1d
+//3. to declare nieghbor arrays somewhere (neighborEdges, recvNeighborEdges) down there you use p......why? 
+
+
+
 ///Matrix Array
 int **globalmatrix;
 int **mySubMatrix;
 int ****submatrices;
 int *continousSubMatrices;
-int *continousSubMatrix;    
-int *neighborEdges;       
+int *continousSubMatrix;  
+int *temp_contiousSubMatrix;  
+int *neighborEdges; 
+int *recvNeighborEdges;      
 
 ///Debug Variables
 bool debug = true;
@@ -150,70 +158,14 @@ void matrixDivider(int p1, int p2, int n){
 	
 }
 
-int sumOfNeighboors(int rank, int q, int p, int n1, int n2){		
-			
-	///Left Edge
-	if((p-1) < 0){
-		if ((rank % 2)==0){
-			//use static values
-		}
-		else{
-			//get nghbr values
-		}
-	}
-	
-	///Right Edge
-	else if((p+1) > n2){
-		if ((rank % 2)==0){
-			//use static values
-		}
-		else{
-			//get nghbr values
-		}
-	}
-	
-	///Top Edge
-	if((q-1) < 0){
-		if ((rank % 2)==0){
-			//use static values
-		}
-		else{
-			//get nghbr values
-		}
-	}
-	
-	///Bottom Edge
-	else if((q+1) > n1){
-		if ((rank % 2)==0){
-			//use static values
-		}
-		else{
-			//get nghbr values
-		}
-	}
-	
-	
-	
-	
-	int sum = 0;
-	for(int i= q-1; i<=q+1; i++){
-		for(int j=p-1; j<=p+1; j++){
-			
-			if (!(i==q and j==p)){
-				sum += mySubMatrix[i][j];
-			}
-		} 
-	}
-	
-	return sum;
-}
-
 int sumOfNghbrs(int rank, int p, int q, int n1, int n2){
 
 	int i = p-1;
 	int j = q-1;
 	
 	int sum = 0;
+	int rankdplce = rank * (n1 + n2);
+	
 	//WHEN YOU COME BACK CHECK WHAT N1 AND N2 ARE, AND UNDERSTAND HOW P1, P2 MAP TO i, j
 	
 	
@@ -225,51 +177,57 @@ int sumOfNghbrs(int rank, int p, int q, int n1, int n2){
 			
 			///Left Edge
 			if(j < 0){
-				if(neighborEdges[rankdplc+i] != -1){  ///does this processor have a nighbr at this out of bound (ie has it been sent wall data?)
-					sum += neighborEdges[rankdplc+i];
+				if(recvNeighborEdges[rankdplce+i] != -1){  ///does this processor have a nighbr at this out of bound (ie has it been sent wall data?)
+					sum += recvNeighborEdges[rankdplce+i];
 				}
 				else{
 					sum += OUTOFBOUNDSVALUE; ///if not, it must be at the edge of the actual global graph
 				}
 			}
 			
+			
 			///Right Edge
-			else if(j > n2){
-				if(neighborEdges[nrankdplc+2+i] != -1){ 
-					sum += neighborEdges[rankdplc+n2+i];
+			else if(j >= n2){
+				if(recvNeighborEdges[rankdplce+n2+i] != -1){ 
+					sum += recvNeighborEdges[rankdplce+n2+i];
 				}
 				else{
 					sum += OUTOFBOUNDSVALUE; 
 				}
 			}
+			
 			
 			///Top Edge
 			else if(i < 0){
-				if(neighborEdges[rankdplc+n2+n2+j] != -1){ 
-					sum += neighborEdges[rankdplc+n2+n2+j];
+				if(recvNeighborEdges[rankdplce+n2+n2+j] != -1){ 
+					sum += recvNeighborEdges[rankdplce+n2+n2+j];
 				}
 				else{
 					sum += OUTOFBOUNDSVALUE; 
 				}
 			}
 			
+			
 			///Bottom Edge
-			else if(i > n1){
-				if(neighborEdges[rankdplc+n2+n2+n1+j] != -1){ 
-					sum += neighborEdges[rankdplc+n2+n2+n1+j];
+			else if(i >= n1){
+				if(recvNeighborEdges[rankdplce+n2+n2+n1+j] != -1){ 
+					sum += recvNeighborEdges[rankdplce+n2+n2+n1+j];
 				}
 				else{
 					sum += OUTOFBOUNDSVALUE; 
 				}
 			}
+			
 			
 			///Normal location
 			else {
-				if( !(i==p and j==p)){
+				if( !(i==p and j==q)){
+					
 					sum += mySubMatrix[i][j];
 				}
 				
 			}
+			
 			j++;
 		}
 		i++;
@@ -279,30 +237,33 @@ int sumOfNghbrs(int rank, int p, int q, int n1, int n2){
 
 }
 
-void gameOfLifeRules(int rank, int a, int b){
+void gameOfLifeRules(int rank, int a, int b, int p1, int p2, int n){
 	
-	int sum;
+	int sum=0;
 	for(int i=0; i<a; i++){
 		for(int j=0; j<b; j++){
 			
 			
-			sum = sumOfNeighboors(rank, i, j, a, b);
+			sum = sumOfNghbrs(rank, i, j, a, b);
 			if( mySubMatrix[i][j] == 1){
 			
 				
 				///Lives
 				if(sum == 2 or sum == 3){
-						//update temp array
+						
+						//temp_contiousSubMatrix[(i*(n/p2))+j] = 1; ///should already be 1
 				}
 				
 				///Dies
 				if(sum < 1 or sum > 4){
-						//update temp array
+						
+						//temp_contiousSubMatrix[(i*(n/p2))+j] = 0;
 				}
 			}
 			else if (mySubMatrix[i][j] == 0){
 				if(sum == 3){
-						//update temp array
+						
+						//temp_contiousSubMatrix[(i*(n/p2))+j] = 1;
 				}
 			}
 			
@@ -381,22 +342,22 @@ void fill_neighborEdges(int rank, int p, int n1, int n2){
 		for(int j = 0; j< n2; j++){
 			///Left Edge
 			if(j==0){
-				neighborEdges[rankdplc+j] = mySubMatrix[i][j];
+				neighborEdges[rankdplce+j] = mySubMatrix[i][j];
 			}
 			
 			///Right Edge
 			if(j==(n2-1)){
-				neighborEdges[rankdplc+n2+j] = mySubMatrix[i][j];
+				neighborEdges[rankdplce+n2+j] = mySubMatrix[i][j];
 			}
 			
 			///Top Edge
 			if(i==0){
-				neighborEdges[rankdplc+n2+n2+j] = mySubMatrix[i][j];
+				neighborEdges[rankdplce+n2+n2+j] = mySubMatrix[i][j];
 			}
 			
 			///Bottom Edge
 			if(i==(n1-1)){
-				neighborEdges[rankdplc+n2+n2+n1+j] = mySubMatrix[i][j];
+				neighborEdges[rankdplce+n2+n2+n1+j] = mySubMatrix[i][j];
 			}		
 		}
 	}
@@ -495,14 +456,29 @@ int main(int argc, char *argv[])
  //Step 4: Conduct k evoluntionary steps in SYNC
 	twoDSubMatrix(N, p1, p2);
   
-	neighborEdges = (int *)malloc(sizeof(int *) * p*((2*(N/p1)) + (2*(N/p2))));
+	temp_contiousSubMatrix = (int *)malloc(sizeof(int *) * ((N/p1) * (N/p2)));  ///traverse each i-> (+N/p2)
+  
+	neighborEdges = (int *)malloc(sizeof(int *) * (p1*p2)*((2*(N/p1)) + (2*(N/p2))));
+	recvNeighborEdges = (int *)malloc(sizeof(int *) * (p1*p2)*((2*(N/p1)) + (2*(N/p2))));
+	
+	///recvNeighborBoard = (int *)malloc(sizeof(int *) 
   
 	for(int i=0; i<k; i++){
 		fill_neighborEdges(rank, p, (((N*N)/(p1*p2))/(N/p1)), (((N*N)/(p1*p2))/(N/p2)));
-		MPI_Alltoall();
 		
-	  ///gameOfLifeRules(rank, ((N*N)/(p1*p2))/(N/p1), ((N*N)/(p1*p2))/(N/p2));
+		MPI_Alltoall(neighborEdges, ((2*(N/p1)) + (2*(N/p2))), MPI_INT,
+					 recvNeighborEdges, ((2*(N/p1)) + (2*(N/p2))), MPI_INT, 
+					 MPI_COMM_WORLD);
+		
+		//gameOfLifeRules(rank, ((N*N)/(p1*p2))/(N/p1), ((N*N)/(p1*p2))/(N/p2), p1, p2, N);
+		gameOfLifeRules(rank, (N/p1), (N/p2), p1, p2, N);
+		
+//Step 5: Send each processors board to Processor-0 to display, every m cycles
+
+		///MPI_Gather();
 	}
+	
+
 	
 	/// Proc-1 [____, right wall, bottom wall, _______]
 	/// Proc-2 [left wall, _____, _______, bottom wall]
