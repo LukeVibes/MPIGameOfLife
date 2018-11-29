@@ -23,7 +23,7 @@ using namespace std;
 //. add p1=1 p2=1 functionality to fill_edges
 //. test with p1 != p2 values
 //. test with N=odd values
-
+//. get rid of nD arrays
 
 
 
@@ -45,6 +45,9 @@ bool debug = true;
 
 ///Global Consts
 int OUTOFBOUNDSVALUE = 0;
+
+///Timmer Values
+double wtime;
 
 ///bigger: used for simple max calculations
 int bigger(int a, int b){
@@ -196,49 +199,48 @@ void matrixDivider(int p1, int p2, int n){
 
 
 ///printFinaltoFile: simply prints recvFinal to output.txt, along with runntime
-void printFinaltoFile(int N, int p1, int p2){
+void printFinaltoFile(int N, int p1, int p2, double time, int p){
 				int rowlength = N/p2;
 				int submtrxSize = (N/p1) * (N/p2);  
 			
 				///File Streaming Set-up
-				ofstream outdata;
-				outdata.open("output.txt", ofstream::out | ofstream::trunc); 
-				if( !outdata ) {
-				  cout << "FILE OUTPUTTING ERROR" << endl;
-				  exit(1);
-				}
+				fstream ofs;
+				ofs.open("output.txt", ios::out | ios::trunc);
+				
 				
 				for(int i=0; i<N; i++){
 					for(int j=0; j<N; j++){
 						if(i<N/p1){
 							if(j<N/p2){
-								outdata << recvFinal[ (rowlength*i) + j ] << " ";
+								ofs << recvFinal[ (rowlength*i) + j ] << " ";
 							}
 							
 							else if(j>=N/p2){
-								outdata << recvFinal[ (rowlength*i) + submtrxSize + (j-(N/p2)) ] << " ";
+								ofs << recvFinal[ (rowlength*i) + submtrxSize + (j-(N/p2)) ] << " ";
 							}
 						}
 						
 						
 						else if(i>=N/p1){
 							if(j<N/p2){
-								outdata << recvFinal[ (rowlength*(i-N/p1)) + (p1*submtrxSize) + j ] << " ";
+								ofs << recvFinal[ (rowlength*(i-N/p1)) + (p1*submtrxSize) + j ] << " ";
 							}
 							
 							else if(j>=N/p2){
-								outdata << recvFinal[ (rowlength*(i-N/p1)) + (p1*submtrxSize) + submtrxSize + (j-(N/p2)) ] << " ";
+								ofs << recvFinal[ (rowlength*(i-N/p1)) + (p1*submtrxSize) + submtrxSize + (j-(N/p2)) ] << " ";
 							}
 						}
 					
 					}
-					outdata << endl;
+					ofs << endl;
 				}
-				outdata << endl;
+				ofs << endl;
 				
+				ofs << "Time            : " << time << endl;
+				ofs << "Time/#processors: " << time/p << endl;
 				
 				///File Stream Wrap-up
-				outdata.close()
+				ofs.close();
 				
 				
 			
@@ -695,6 +697,12 @@ int main(int argc, char *argv[])
 	///Inital Bcast Variables
 	int *sendbuf;
 	sendbuf = (int (*))malloc(sizeof(int) * 5);
+	
+	//~~~Start Timmer~~~
+	if (rank == 0) 
+	{
+		wtime = MPI::Wtime();
+	}
   
 //Step 0: Processor-0 reads in Assigment Variables
 	if (rank == 0){
@@ -802,10 +810,16 @@ int main(int argc, char *argv[])
 						 recvFinal, ((N/p1) * (N/p2)), MPI_INT,
 						 MPI_COMM_WORLD);
 			
-			
+
+			//~~~End Timmer~~~
+			if (rank == 0)
+			{
+				wtime = MPI::Wtime() - wtime;
+			}
+
 			///Print final matrix to output.txt
 			if(rank==0){
-				printFinaltoFile(N, p1, p2);	
+				printFinaltoFile(N, p1, p2, wtime, p);	
 			}
 			
 			////SubMatrix by SubMatrix print for testing
