@@ -15,6 +15,8 @@ using namespace std;
 //2. make 2d arrays int 1d
 //3. to declare nieghbor arrays somewhere (neighborEdges, recvNeighborEdges) down there you use p......why? 
 //4. improve print functions
+//5. ad p1=1 p2=1 functionality to fill_edges
+
 
 
 
@@ -182,9 +184,9 @@ int sumOfNghbrs(int rank, int p, int x, int y, int n1, int n2, int p1, int p2){
 	
 	int edgelength = bigger(n1, n2);
 	int rankdplce = rank * edgelength;
+	int crank = 1;
 	
-	
-	
+	/*
 	if(rank ==0){
 
 			cout << "recvNghbrEdges:::  [" ;
@@ -196,20 +198,13 @@ int sumOfNghbrs(int rank, int p, int x, int y, int n1, int n2, int p1, int p2){
 			}
 			cout << "] " << endl<<endl;
 	}
-	
+	*/
 
-	int leftproc = rank -1;
-	if(rank-1 < 0){leftproc = rank;}
+
+	bool printcond = false;
 	
-	int rightproc = rank +1;
-	if(rank-1 < 0){leftproc = 0;}
-	
-	int topproc = rank -2;
-	if(rank-1 < 0){leftproc = 0;}
-	
-	int underproc = rank +2;
-	if(rank-1 < 0){leftproc = 0;}
-	
+	if(rank == 1 and x==4 and y==0){printcond = true;}
+
 	int index;
 	int jndex;
 	while(i <= x+1){
@@ -218,61 +213,165 @@ int sumOfNghbrs(int rank, int p, int x, int y, int n1, int n2, int p1, int p2){
 			
 			///Left Edge
 			if(j < 0){
-				if(recvNeighborEdges[(abs(rank-1)* edgelength)+i] != -1){  ///does this processor have a nighbr at this out of bound (ie has it been sent wall data?)
-					sum += recvNeighborEdges[(abs(rank-1)* edgelength)+i];
-						if (rank==0){cout << "flag a" << endl;}
-					
+				
+				
+				
+				//left top
+				if(i<0){
+						if(p1 > 1){
+						if(rank-2>=0){
+							sum += recvNeighborEdges[(abs(3-rank)*edgelength)+j];
+							if (printcond==true){cout << "flag ac1 " << sum << endl;}
+						}
+						else{
+							sum += OUTOFBOUNDSVALUE; 
+							if (printcond==true){cout << "flag ac " << sum << endl;}
+						}
+						}
+						else{
+							sum += OUTOFBOUNDSVALUE; 
+							if (printcond==true){cout << "flag ac " << sum << endl;}
+						}
+			  }
+			  
+			  //left under
+			  else if(i>=n1){
+					  if(p1 > 1){
+						if(rank-2>=0){
+							sum += OUTOFBOUNDSVALUE; 
+							if (printcond==true){cout << "flag ad " << sum << endl;}
+						
+						}
+						else{
+							sum += recvNeighborEdges[(abs(1+rank)*edgelength)+j];
+							if (printcond==true){cout << "flag ad1 " << sum << endl;}
+						}
+					}
+					else{
+							sum += OUTOFBOUNDSVALUE; 
+							if (printcond==true){cout << "flag ad " << sum << endl;}
+						} 
+			  }
+				
+
+				
+				else{
+				if(p2 > 1){
+					if(rank%2==0){
+						sum+=OUTOFBOUNDSVALUE;
+						if (printcond==true){cout << "flag a " << sum << endl;}
+						}
+					else{
+						sum+=recvNeighborEdges[(abs(rank-1)* edgelength)+i];
+						if (printcond==true){cout << "flag a1 " << sum << endl;}
+						}
 				}
 				else{
-					sum += OUTOFBOUNDSVALUE; ///if not, it must be at the edge of the actual global graph
-						if (rank==0){cout << "flag a1" << endl;}
-					
+					sum+=OUTOFBOUNDSVALUE;
+					if (printcond==true){cout << "flag a " << sum << endl;}
+					}	
 				}
 			}
 			
 			
 			///Right Edge
 			else if(j >= n2){
-				if(recvNeighborEdges[(abs(rank+1)* edgelength)+i] != -1){ 
-					sum += recvNeighborEdges[(abs(rank+1)* edgelength)+i];
-						if (rank==0){cout << "flag b" << endl;}
+				
+				//up-right
+				if(i<0){
+						if(p1 > 1){
+						if(rank-2>=0){
+							sum += recvNeighborEdges[(abs(p2-rank)*edgelength)+j];
+							if (printcond==true){cout << "flag bc1 " << sum << endl;}
+						}
+						else{
+							sum += OUTOFBOUNDSVALUE; 
+							if (printcond==true){cout << "flag bc " << sum << endl;}
+						}
+						}
+						else{
+							sum += OUTOFBOUNDSVALUE; 
+							if (printcond==true){cout << "flag bc " << sum << endl;}
+						}
+			  }
+			    //under-right
+				else if(i>= n1){
+						if(p1 > 1){
+						if(rank-2>=0){
+							sum += OUTOFBOUNDSVALUE; 
+							if (printcond==true){cout << "flag bd " << sum << endl;}
+
+						}
+						else{
+							sum += recvNeighborEdges[(abs(p2+rank)*edgelength)+j];
+							if (printcond==true){cout << "flag bd1 " << sum << endl;}
+						}
+						}
+						else{
+							sum += OUTOFBOUNDSVALUE; 
+							if (printcond==true){cout << "flag bd " << sum << endl;}
+						}
 					
 				}
-				else{
-					sum += OUTOFBOUNDSVALUE; 
-						if (rank==0){cout << "flag b1" << endl;}
 				
+				
+				
+				else{
+				if(p2 > 1){
+					if(rank%2==0){
+						sum+=recvNeighborEdges[(abs(rank-1)* edgelength)+i];
+						if (printcond==true){cout << "flag b1 " << sum << endl;}
+						}
+					else{
+						sum+=OUTOFBOUNDSVALUE;
+						if (printcond==true){cout << "flag b " << sum << endl;}
+						
+						}
+				}
+				else{
+					sum+=OUTOFBOUNDSVALUE;
+					if (printcond==true){cout << "flag b " << sum << endl;}
+				}
 				}
 			}
 			
 			
 			///Top Edge
 			else if(i < 0){
-				if(recvNeighborEdges[(abs(p2-rank)*edgelength)+j] != -1){ 
-					sum += recvNeighborEdges[(abs(p2-rank)*edgelength)+j];
-						if (rank==0){cout << "flag c" << endl;}
-					
+				if(p1 > 1){
+					if(rank-2>=0){
+						sum += recvNeighborEdges[(abs(p2-rank)*edgelength)+j];
+						if (printcond==true){cout << "flag c1 " << sum << endl;}
+					}
+					else{
+						sum += OUTOFBOUNDSVALUE; 
+						if (printcond==true){cout << "flag c " << sum << endl;}
+					}
 				}
 				else{
-					sum += OUTOFBOUNDSVALUE; 
-						if (rank==0){cout << "flag c1" << endl;}
-				
-				}
+						sum += OUTOFBOUNDSVALUE; 
+						if (printcond==true){cout << "flag c " << sum << endl;}
+					}
 			}
 			
 			
 			///Bottom Edge
 			else if(i >= n1){
-				if(recvNeighborEdges[(abs(p2+rank)*edgelength)+j] != -1){ 
-					sum += recvNeighborEdges[(abs(p2+rank)*edgelength)+j];
-						if (rank==0){cout << "flag d" << endl;}
+				if(p1 > 1){
+					if(rank-2>=0){
+						sum += OUTOFBOUNDSVALUE; 
+						if (printcond==true){cout << "flag d " << sum << endl;}
 					
+					}
+					else{
+						sum += recvNeighborEdges[(abs(p2+rank)*edgelength)+j];
+						if (printcond==true){cout << "flag d1 " << sum << endl;}
+					}
 				}
 				else{
-					sum += OUTOFBOUNDSVALUE; 
-						if (rank==0){cout << "flag d1" << endl;}
-					
-				}
+						sum += OUTOFBOUNDSVALUE; 
+						if (printcond==true){cout << "flag d " << sum << endl;}
+					}
 			}
 			
 			
@@ -281,7 +380,7 @@ int sumOfNghbrs(int rank, int p, int x, int y, int n1, int n2, int p1, int p2){
 				if( !(i==x and j==y)){
 					
 					sum += mySubMatrix[i][j];
-						if (rank==0){cout << "flag e" << endl;}
+						if (printcond==true){cout << "flag e " << sum << endl;}
 					
 				}
 				
@@ -293,7 +392,7 @@ int sumOfNghbrs(int rank, int p, int x, int y, int n1, int n2, int p1, int p2){
 		j = y-1;
 	}
 
-
+	return sum;
 }
 
 void gameOfLifeRules(int rank, int a, int b, int p1, int p2, int n){
@@ -304,7 +403,7 @@ void gameOfLifeRules(int rank, int a, int b, int p1, int p2, int n){
 			
 			
 			sum = sumOfNghbrs(rank, p1*p2, i, j, a, b, p1, p2);
-			if(rank == 0){
+			if(rank == 1){
 						cout << "[" << i << "," << j << "]   sum->" << sum <<  endl;
 						
 
@@ -419,6 +518,12 @@ void fill_neighborEdges(int rank, int p, int n1, int n2, int p1, int p2){
 						}
 						else{
 							neighborEdges[(abs(rank-1)* edgelength)+i] = mySubMatrix[i][j];
+							
+							if(i==(n1-1)){
+								for(int i=0; i<p; i++){
+									neighborEdges[
+								}
+							}
 						}
 					
 				}
@@ -467,6 +572,9 @@ void fill_neighborEdges(int rank, int p, int n1, int n2, int p1, int p2){
 			}	
 		}
 	}
+	
+	
+	
 }
 
 void updateSubMatrix(int rank, int n, int p1, int p2){
@@ -558,12 +666,14 @@ int main(int argc, char *argv[])
 		if(debug==true){
 			for(int i=0; i<5; i++){
 				for(int j=0; j<5; j++){
-					cout << submatrices[0][0][i][j];
+					cout << submatrices[0][1][i][j];
 				}
-				cout << endl;
+				cout << endl<<endl;;
 			}
 		}
 	}
+	
+	
     
    
  //Step 3: Send out SubMatrices
@@ -594,7 +704,7 @@ int main(int argc, char *argv[])
 	}
 	
 	
-	if(rank == 0){
+	if(rank == 1){
 			cout << endl;
 			for(int i = 0; i<(N/p1); i++){
 				for(int j = 0; j<(N/p2); j++){
@@ -602,11 +712,14 @@ int main(int argc, char *argv[])
 				}
 				cout << endl;
 			}
-	}
+		
+		}
   
  
-	for(int w=0; w<5; w++){
+	for(int w=0; w<3; w++){
 		fill_neighborEdges(rank, p, N/p1, N/p2, p1, p2);
+		
+		/*
 		if(rank ==0){
 
 			cout << "sendNghbrEdges:  [" ;
@@ -618,6 +731,7 @@ int main(int argc, char *argv[])
 			}
 			cout << "] " << endl;
 		}
+		* */
 		
 		MPI_Alltoall(neighborEdges, edgelength, MPI_INT,
 					 recvNeighborEdges, edgelength, MPI_INT, 
@@ -626,6 +740,7 @@ int main(int argc, char *argv[])
 		
 		if(rank ==0){
 
+			/*
 			cout << "recvNghbrEdges:  [" ;
 			
 			
@@ -634,6 +749,7 @@ int main(int argc, char *argv[])
 				cout << recvNeighborEdges[i] << ", ";
 			}
 			cout << "] " << endl<<endl;
+			*/ 
 		}
 		
 		///gameOfLifeRules(rank, ((N*N)/(p1*p2))/(N/p1), ((N*N)/(p1*p2))/(N/p2), p1, p2, N);
@@ -641,7 +757,7 @@ int main(int argc, char *argv[])
 		gameOfLifeRules(rank, (N/p1), (N/p2), p1, p2, N);
 		updateSubMatrix(rank, N, p1, p2);
 		
-		if(rank == 0){
+		if(rank == 1){
 			cout << endl;
 			for(int i = 0; i<(N/p1); i++){
 				for(int j = 0; j<(N/p2); j++){
