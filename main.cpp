@@ -514,6 +514,72 @@ int sumOfNghbrs(int rank, int p, int x, int y, int n1, int n2, int p1, int p2){
 }
 
 
+
+int sumOfNeighbors(int x, int y, int rank, int N, int p1, int p2){
+	//NOT OPTIMIZES FOR P1xP2==2
+	
+	int sum = 0;
+	int max = bigger(N/p1, N/p2);
+	
+	bool testable = false;
+	
+	if(rank==1 and x==4 and y==4){testable=true;}
+	
+	for(int i=x-1; i<=x+1; i++){
+		for(int j=y-1; j<=y+1; j++){
+			
+			///Corner Case
+			if(p1*p2==4){
+				if(i==special_i(i, N, rank, p1) and j==special_j(j, N, rank, p2)){
+					sum += recvEdges[ ((3-rank)*max)  +  max-1 ];
+					continue; //TEST
+					if(testable){cout << "corner hit  sum: "<< sum << endl;}
+				}
+			}
+			
+			///Left Case
+			if(j<0){
+				if(rank%2==0){sum += 0;}
+				else{sum += recvEdges[ (sSub(rank, 1) * max) + i ];}
+				if(testable){cout << "left hit  location: "<< (sSub(rank, 1) * max) + i << "  sum: " << sum << endl;}
+			}
+			
+			///Right Case
+			else if(j>((N/p2)-1)){
+				if(!(rank%2==0)){sum += 0;}
+				else{sum += recvEdges[ (sAdd(rank, 2,  max-1) * max) + i ];}
+				if(testable){cout << "right hit  sum: "<< sum << endl;}
+			}
+			
+			///Top Case
+			else if(i<0){
+				if(rank>=(p1*p2)){sum += recvEdges[ (sSub(rank, 2) * max) + j ];}
+				else{sum += 0;}
+				if(testable){cout << "top hit  sum: "<< sum << endl;}
+			}
+			
+			///Bottom Case
+			else if(i>((N/p1)-1)){
+				if(rank<(p1*p2)){sum += recvEdges[ (sAdd(rank, 2, max-1) * max) + j ];}
+				else{ sum += 0;}
+				if(testable){cout << j << " bottom hit  sum: "<< sum << "  location: " <<  (sAdd(rank, 2, max-1) * max) + j << endl;}
+			}
+			
+			///Regular Case
+			else{
+				sum+= mySubMatrix[i][j];
+				if(testable){cout << "regular hit  sum: "<< sum << endl;}
+			}
+			
+		}
+	} 
+	
+	
+	if(testable){cout << "FINAL SUM: " << sum << endl;}
+	return sum;
+}
+
+
 ///gameOfLifeRules: using the game of life rules decided whether to kill or birth or
 ///                 keep alive values in mySubMatrix
 void gameOfLifeRules(int p1, int p2, int n, int rank){
@@ -525,12 +591,10 @@ void gameOfLifeRules(int p1, int p2, int n, int rank){
 		for(int j=0; j<n/p2; j++){
 			
 			
-			//sum = sumOfNghbrs(rank, p1*p2, i, j, a, b, p1, p2);
+			sum = sumOfNeighbors(i, j, rank, n, p1, p2);
 			if(rank == 1){
-						//cout << "[" << i << "," << j << "]   sum->" << sum <<  endl;
-						
-
-					}
+						cout << "[" << i << "," << j << "]   sum->" << sum <<  endl;
+			}
 			if( mySubMatrix[i][j] == 1){
 			
 				
@@ -723,7 +787,7 @@ void populateMyEdges(int p1, int p2, int N, int rank){
 	
 	bool testable=false;
 	
-	if(rank==2){testable=true;}
+	///if(rank==2){testable=true;}
 	
 	if(testable){cout << "function hit" << endl;}
 	
@@ -796,17 +860,7 @@ void populateMyEdges(int p1, int p2, int N, int rank){
 	
 }
 
-int sumOfNeighbors(int x, int y){
-	int sum = 0;
-	
-	for(int i=x-1; i<=x+1; i++){
-		for(int j=y-1; j<=y+1; j++){
-		}
-	} 
-	
-	
-	return sum;
-}
+
 
 int main(int argc, char *argv[])
 {
