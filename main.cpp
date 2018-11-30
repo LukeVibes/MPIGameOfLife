@@ -15,10 +15,11 @@ using namespace std;
 //. Have all values send to Proc-0                 14:30 DONE
 //. clean up code										 DONE
 //. Have Proc-0 print to file final array          16:15 DONE
-//. Add runttime timer							   16:45
-//. improve print functions                        17:30
+//. Add runttime timer							   16:45 DONE
 //. GET PROPER EDGE SENDING!                       22:30
-
+		//. Design								19:10
+		//. Test								22:10
+		//. Final Code							23:10
 
 //. add p1=1 p2=1 functionality to fill_edges
 //. test with p1 != p2 values
@@ -35,6 +36,8 @@ int *continousSubMatrices;
 int *continousSubMatrix;  
 int *temp_contiousSubMatrix;  
 int *neighborEdges; 
+int *Edges;
+int *recvEdges;
 int *recvNeighborEdges;      
 int *sendFinal;
 int *recvFinal;
@@ -51,7 +54,7 @@ double wtime;
 
 ///bigger: used for simple max calculations
 int bigger(int a, int b){
-	int r = -1;
+	int r = a;
 	if (a >= b){
 		r = a;
 	}
@@ -59,6 +62,46 @@ int bigger(int a, int b){
 		r = b;
 	}
 	return r;
+}
+
+///sAdd: when doing addition on rank values, if sum is greater than greatest
+///      rank value, returns intial rank value. (Needed for scalable algebra in
+///       edge detection and edge surrounding cell addition.
+int sAdd(int rank, int v, int maxrank){
+	if( (rank +v) > maxrank ){ return rank;}
+	else{					   return rank+v;}
+}
+
+///sSub: similar to sAdd but if the rank - v is less than zero, returns the
+///      intial rank.
+int sSub(int rank, int v){
+	if( (rank-v) < 0 ){ return rank;}
+	else{				return rank-v;}
+}
+
+int special_i(int i, int N, int rank, int p1){
+	int sp_i;
+	if(rank < p1){
+		sp_i = ((N/p1) -1);
+	}
+	else if(rank >= p1){
+		sp_i = 0;
+	}
+	
+	return sp_i;
+}
+
+int special_j(int j, int N, int rank, int p2){
+	int sp_j;
+
+	if(rank%2==0){
+		sp_j = ((N/p2) -1);
+	}
+	else{
+		sp_j = 0;
+	}
+
+	return sp_j;
 }
 
 ///declareGlobalMatrix: simple malloc on gobalmatrix dataset
@@ -473,14 +516,16 @@ int sumOfNghbrs(int rank, int p, int x, int y, int n1, int n2, int p1, int p2){
 
 ///gameOfLifeRules: using the game of life rules decided whether to kill or birth or
 ///                 keep alive values in mySubMatrix
-void gameOfLifeRules(int rank, int a, int b, int p1, int p2, int n){
+void gameOfLifeRules(int p1, int p2, int n, int rank){
 	
 	int sum=0;
-	for(int i=0; i<a; i++){
-		for(int j=0; j<b; j++){
+	int max = bigger(n/p1, n/p2);
+	
+	for(int i=0; i<n/p1; i++){
+		for(int j=0; j<n/p2; j++){
 			
 			
-			sum = sumOfNghbrs(rank, p1*p2, i, j, a, b, p1, p2);
+			//sum = sumOfNghbrs(rank, p1*p2, i, j, a, b, p1, p2);
 			if(rank == 1){
 						//cout << "[" << i << "," << j << "]   sum->" << sum <<  endl;
 						
@@ -563,9 +608,10 @@ void freeAll(int rank, int n, int p1, int p2){
 	free(mySubMatrix);
 	free(continousSubMatrix);
 	
-	free(neighborEdges);
+	free(Edges);
+	free(recvEdges);
 	free(temp_contiousSubMatrix);
-	free(recvNeighborEdges);
+	//free(recvNeighborEdges);
 	
 	free(sendFinal);
 	free(recvFinal);
@@ -672,6 +718,96 @@ void updateSubMatrix(int rank, int n, int p1, int p2){
 }
 
 
+
+void populateMyEdges(int p1, int p2, int N, int rank){
+	
+	bool testable=false;
+	
+	if(rank==2){testable=true;}
+	
+	if(testable){cout << "function hit" << endl;}
+	
+	
+	
+	int max = bigger(N/p1, N/p2);
+	for(int i=0; i<N/p1; i++){
+		for(int j=0; j<N/p2; j++){
+			
+				if(p1*p2==2){
+					///Only left/right edges needed
+					if(p1>1){
+						if(i==N/p1 or i==0){
+							Edges[(abs(rank-1)*N) + j] = mySubMatrix[i][j];
+						}
+					}
+
+					///Only bottom/top edges needed
+					else if(p2>1){
+						if(i==N/p2 or i==0){
+							Edges[(abs(rank-1)*N) + i] = mySubMatrix[i][j];
+						}
+					}
+				}
+
+
+				if(p1*p2>2){
+					///Corner Cases
+					if(i==special_i(i, N, rank, p1) and j==special_j(j, N, rank, p2)){
+						Edges[ ((3-rank) * max) + (max - 1)] = mySubMatrix[i][j];
+						if(testable){cout<<"special hit [" << i << "," << j << "] " << endl;}
+					}
+					
+					///Left Edge
+					if(j == 0){
+						if(!(rank%2==0)){
+							Edges[ ((rank-1)*max) + i ] = mySubMatrix[i][j];
+							if(testable){cout<<"left hit [" << i << "," << j << "] " << endl;}
+						}
+					}
+					
+					///Right Edge
+					if(j == ((N/p2) -1)){
+						if(rank%2==0){
+							Edges[ ((rank+1)*max) + i ] = mySubMatrix[i][j];
+							if(testable){cout<<"right hit [" << i << "," << j << "]  location: " <<(rank+1) + i  << endl;}
+						}
+					}
+
+					///Top Edge
+					if(i == 0){
+						if(rank>=(p1*p2/2)){
+							Edges[ ((rank-2) * max) + j ] = mySubMatrix[i][j];
+							if(testable){cout<<"top hit [" << i << "," << j << "]  value: "<<  mySubMatrix[i][j] << endl;}
+						}
+					}
+					
+					///Bottom Edge
+					if(i == ((N/p2) -1)){
+						if(rank<(p1*p2/2)){
+							Edges[ ((rank+2) * max) + j ] = mySubMatrix[i][j];
+							if(testable){cout<<"bottom hit [" << i << "," << j << "]  location: " << ((rank+2) * max) + j << endl;}
+						}
+					}
+
+				}
+				
+		}
+	}
+	
+}
+
+int sumOfNeighbors(int x, int y){
+	int sum = 0;
+	
+	for(int i=x-1; i<=x+1; i++){
+		for(int j=y-1; j<=y+1; j++){
+		}
+	} 
+	
+	
+	return sum;
+}
+
 int main(int argc, char *argv[])
 {
 	int rank;
@@ -761,38 +897,87 @@ int main(int argc, char *argv[])
  //Step 4: Conduct k evoluntionary steps in SYNC
 	///Bring continous matrix back to 2D Form (for convience)
 	twoDSubMatrix(N, p1, p2);
-	int edgelength = bigger(N/p1, N/p2);
+	int max = bigger(N/p1, N/p2);
 	
 	///Datasets needed to communicate Neighbors Edges to each other
 	temp_contiousSubMatrix = (int *)malloc(sizeof(int *) * ((N/p1) * (N/p2)));  ///traverse each i-> (+N/p2)
-	recvNeighborEdges = (int *)malloc(sizeof(int *) * (p1*p2) * edgelength);  
-	neighborEdges = (int *)malloc(sizeof(int *) * (p1*p2) * edgelength);  
+	recvEdges = (int *)malloc(sizeof(int *) * (p1*p2) * max);  
+	Edges     = (int *)malloc(sizeof(int *) * (p1*p2) * max);  
 	
 	///Datasets needed for printing final matrix to output.txt
 	sendFinal		= (int *)malloc(sizeof(int *) * (N*N));
 	recvFinal 		= (int *)malloc(sizeof(int *) * (N*N));
 
 	///Initalize Edge Dataset to avoid errors (and for testing convience)
-	for (int i=0; i<(p * edgelength); i++){
-		recvNeighborEdges[i] = -1;
+	for (int i=0; i<(p * max); i++){
+		Edges[i] = 0;
 	}
 	
 	///Evolve Game Of Life board!
 	for(int w=0; w<k; w++){
 		
 		///Collect processors submatrix edge values
-		fill_neighborEdges(rank, p, N/p1, N/p2, p1, p2);
+		populateMyEdges(p1, p2, N, rank);
+	
+		//Edge print
+		if(1==0){
+					MPI_Barrier(MPI_COMM_WORLD);
+					if(rank == 0){
+						cout<< "rank " << rank <<  " Edges[]: "<< endl;
+						for(int i=0; i<(p1*p2) * max; i++){
+							if(i%5==0){cout<<" | ";}
+							cout << Edges[i] << " ";
+							
+						}
+						cout << endl<< endl;
+					}
+					
+					MPI_Barrier(MPI_COMM_WORLD);
+					if(rank == 1){
+						cout<< "rank " << rank <<  " Edges[]: "<< endl;
+						for(int i=0; i<(p1*p2) * max; i++){
+							if(i%5==0){cout<<" | ";}
+							cout << Edges[i] << " ";
+						}
+						cout << endl<< endl;
+					}
+					
+					MPI_Barrier(MPI_COMM_WORLD);
+					if(rank == 2){
+						cout<< "rank " << rank <<  " Edges[]: "<< endl;
+						for(int i=0; i<(p1*p2) * max; i++){
+							if(i%5==0){cout<<" | ";}
+							cout << Edges[i] << " ";
+						}
+						cout << endl<< endl;
+					}
+					
+					MPI_Barrier(MPI_COMM_WORLD);
+					if(rank == 3){
+						cout<< "rank " << rank <<  " Edges[]: "<< endl;
+						for(int i=0; i<(p1*p2) * max; i++){
+							if(i%5==0){cout<<" | ";}
+							cout << Edges[i] << " ";
+						}
+						cout << endl<< endl;
+					}
+		}
+		
 		
 		///Begin with communicating processors with neighbors edge values
-		MPI_Alltoall(neighborEdges, edgelength, MPI_INT,
-					 recvNeighborEdges, edgelength, MPI_INT, 
+		MPI_Alltoall(Edges, max, MPI_INT,
+					 recvEdges, max, MPI_INT, 
 					 MPI_COMM_WORLD);
 		
+		
 		///Conduct Game Of Life Rules onto processors submatrix
-		gameOfLifeRules(rank, (N/p1), (N/p2), p1, p2, N);
+		gameOfLifeRules(p1, p2, N, rank);
+		
+		/*
 		updateSubMatrix(rank, N, p1, p2);
 		
 //Step 5: Send each processors board to Processor-0 to display, every m cyclesS
+		/*
 		if(((w+1) % m)==0){
 			///Populate sendFinal with processors subMatrix values
 			int rowlength = N/p2;
@@ -873,6 +1058,7 @@ int main(int argc, char *argv[])
 			}
 			
 		}
+		*/
 	}
 	
 	///Wrap-UP
