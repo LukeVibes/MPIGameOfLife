@@ -68,7 +68,7 @@ int bigger(int a, int b){
 ///      rank value, returns intial rank value. (Needed for scalable algebra in
 ///       edge detection and edge surrounding cell addition.
 int sAdd(int rank, int v, int maxrank){
-	if( (rank +v) > maxrank ){ return rank;}
+	if( (rank + v) > maxrank ){ return rank;}
 	else{					   return rank+v;}
 }
 
@@ -523,19 +523,25 @@ int sumOfNeighbors(int x, int y, int rank, int N, int p1, int p2){
 	
 	bool testable = false;
 	
-	if(rank==1 and x==4 and y==4){testable=true;}
+	//if(rank==2 and x==1 and y==4){testable=true;}
+		
+
+					
+	
+	if(p1*p2==4){
+				if(x==special_i(x, N, rank, p1) and y==special_j(y, N, rank, p2)){
+					sum += recvEdges[ ((3-rank)*max)  +  max-1 ];
+					if(testable){cout << "corner hit  sum: "<< sum << endl;}
+					//continue; //TEST
+					
+				}
+			}
 	
 	for(int i=x-1; i<=x+1; i++){
 		for(int j=y-1; j<=y+1; j++){
 			
-			///Corner Case
-			if(p1*p2==4){
-				if(i==special_i(i, N, rank, p1) and j==special_j(j, N, rank, p2)){
-					sum += recvEdges[ ((3-rank)*max)  +  max-1 ];
-					continue; //TEST
-					if(testable){cout << "corner hit  sum: "<< sum << endl;}
-				}
-			}
+			if(!(i==x and j==y))
+			{
 			
 			///Left Case
 			if(j<0){
@@ -547,22 +553,22 @@ int sumOfNeighbors(int x, int y, int rank, int N, int p1, int p2){
 			///Right Case
 			else if(j>((N/p2)-1)){
 				if(!(rank%2==0)){sum += 0;}
-				else{sum += recvEdges[ (sAdd(rank, 2,  max-1) * max) + i ];}
-				if(testable){cout << "right hit  sum: "<< sum << endl;}
+				else{sum += recvEdges[ (sAdd(rank, 1,  (p1*p2)-1) * max) + i ];}
+				if(testable){cout << "right hit  sum: "<< sum <<  "  location: " << (sAdd(rank, 2,  (p1*p2)-1) * max) + i << " sAdd:" <<sAdd(rank, 2,  (p1*p2)-1)  << endl;}
 			}
 			
 			///Top Case
 			else if(i<0){
-				if(rank>=(p1*p2)){sum += recvEdges[ (sSub(rank, 2) * max) + j ];}
+				if(rank>=((p1*p2)/2)){sum += recvEdges[ (sSub(rank, 2) * max) + j ];}
 				else{sum += 0;}
-				if(testable){cout << "top hit  sum: "<< sum << endl;}
+				if(testable){cout << "top hit  sum: "<< sum << "  location: " <<  (sSub(rank, 2) * max) + j << endl;}
 			}
 			
 			///Bottom Case
 			else if(i>((N/p1)-1)){
-				if(rank<(p1*p2)){sum += recvEdges[ (sAdd(rank, 2, max-1) * max) + j ];}
+				if(rank<((p1*p2)/2)){sum += recvEdges[ (sAdd(rank, 2, (p1*p2)-1) * max) + j ];}
 				else{ sum += 0;}
-				if(testable){cout << j << " bottom hit  sum: "<< sum << "  location: " <<  (sAdd(rank, 2, max-1) * max) + j << endl;}
+				if(testable){cout << j << " bottom hit  sum: "<< sum << "  location: " <<  (sAdd(rank, 2, max-1) * max) + j << "  value " <<  recvEdges[ (sAdd(rank, 2, max-1) * max) + j ] << endl;}
 			}
 			
 			///Regular Case
@@ -570,7 +576,8 @@ int sumOfNeighbors(int x, int y, int rank, int N, int p1, int p2){
 				sum+= mySubMatrix[i][j];
 				if(testable){cout << "regular hit  sum: "<< sum << endl;}
 			}
-			
+		
+			}	
 		}
 	} 
 	
@@ -592,8 +599,8 @@ void gameOfLifeRules(int p1, int p2, int n, int rank){
 			
 			
 			sum = sumOfNeighbors(i, j, rank, n, p1, p2);
-			if(rank == 1){
-						cout << "[" << i << "," << j << "]   sum->" << sum <<  endl;
+			if(rank == 2){
+						//cout << "[" << i << "," << j << "]   sum->" << sum <<  endl;
 			}
 			if( mySubMatrix[i][j] == 1){
 			
@@ -787,7 +794,7 @@ void populateMyEdges(int p1, int p2, int N, int rank){
 	
 	bool testable=false;
 	
-	///if(rank==2){testable=true;}
+	//if(rank==3){testable=true;}
 	
 	if(testable){cout << "function hit" << endl;}
 	
@@ -818,7 +825,7 @@ void populateMyEdges(int p1, int p2, int N, int rank){
 					///Corner Cases
 					if(i==special_i(i, N, rank, p1) and j==special_j(j, N, rank, p2)){
 						Edges[ ((3-rank) * max) + (max - 1)] = mySubMatrix[i][j];
-						if(testable){cout<<"special hit [" << i << "," << j << "] " << endl;}
+						if(testable){cout<<"special hit [" << i << "," << j << "]   value: " <<  mySubMatrix[i][j] << "  location : " <<  ((3-rank) * max) + (max - 1) << endl;}
 					}
 					
 					///Left Edge
@@ -896,11 +903,11 @@ int main(int argc, char *argv[])
   
 //Step 0: Processor-0 reads in Assigment Variables
 	if (rank == 0){
-		N = 10;
+		N = 20;
 		p1 = 2;
 		p2 = 2;
-		k  = 4;   ////Should be: 100
-		m  = 2;   ////Should be: 25
+		k  = 100;   ////Should be: 100
+		m  = 25;   ////Should be: 25
 		
 		sendbuf[0] = N;
 		sendbuf[1] = p1;
@@ -930,7 +937,7 @@ int main(int argc, char *argv[])
   
 //Step 1: Processor-0 reads in NxN binary matrix from input.txt
 	if (rank == 0) {
-		string file = "input1.txt";
+		string file = "input3.txt";
 		fileToMatrix(file, N);
 	}
    
@@ -966,6 +973,17 @@ int main(int argc, char *argv[])
 	for (int i=0; i<(p * max); i++){
 		Edges[i] = 0;
 	}
+	
+	MPI_Barrier(MPI_COMM_WORLD);
+	if(rank==0){
+			cout << "rank " << rank << " SubMatrix" << endl;
+			for(int i=0; i<N/p1; i++){
+				for(int j=0; j<N/p2; j++){
+					cout << mySubMatrix[i][j] << " ";
+				}
+				cout << endl;
+			}
+		}
 	
 	///Evolve Game Of Life board!
 	for(int w=0; w<k; w++){
@@ -1026,12 +1044,23 @@ int main(int argc, char *argv[])
 		
 		///Conduct Game Of Life Rules onto processors submatrix
 		gameOfLifeRules(p1, p2, N, rank);
-		
-		/*
 		updateSubMatrix(rank, N, p1, p2);
 		
+		MPI_Barrier(MPI_COMM_WORLD);
+		if(rank==0){
+			cout << "rank " << rank << " SubMatrix" << endl;
+			for(int i=0; i<N/p1; i++){
+				for(int j=0; j<N/p2; j++){
+					cout << mySubMatrix[i][j] << " ";
+				}
+				cout << endl;
+			}
+			cout << endl;
+		}
+		
+		
 //Step 5: Send each processors board to Processor-0 to display, every m cyclesS
-		/*
+		
 		if(((w+1) % m)==0){
 			///Populate sendFinal with processors subMatrix values
 			int rowlength = N/p2;
@@ -1112,7 +1141,7 @@ int main(int argc, char *argv[])
 			}
 			
 		}
-		*/
+		
 	}
 	
 	///Wrap-UP
